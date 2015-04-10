@@ -8,6 +8,9 @@
     <string name="playlist_en">Playlist</string>
     <string name="artiste">Artiste</string>
 
+	<string name="appwidget_text">EXAMPLE</string>
+    <string name="add_widget">Add widget</string>
+
 	<string name="albumDateText">Date</string>
 	<string name="albumArtistText">Artiste</string>
 	<string name="albumTitleText">Titre</string>

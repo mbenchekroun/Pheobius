@@ -17,9 +17,13 @@ class SongList extends MusicQueryBuilder
 	{
 		musicResolver = MainActivity.applicationContext.contentResolver
 		musicCursor = queryCursor
+
 		createAlbumList()
 		createSongList()
-		currentSongId = songList[0].ID // TODO : Gérer le cas liste vide
+
+		if(songList.isEmpty()){ currentSongId = -1 }
+        else{ currentSongId = songList[0].ID }
+
 		loop = false
 	}
 
