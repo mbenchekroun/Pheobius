@@ -29,7 +29,13 @@ class SongList
 	{
 		musicResolver = _musicResolver
 		musicCursor = queryCursor
-		currentSongId = songList[0].ID // TODO : Gérer le cas liste vide
+
+        if(songList.isEmpty()){
+            currentSongId = -1
+        }else{
+            currentSongId = songList[0].ID
+        }
+
 		loop = false
 	}
 
