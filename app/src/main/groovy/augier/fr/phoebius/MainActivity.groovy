@@ -2,60 +2,67 @@ package augier.fr.phoebius
 
 
 import android.app.Activity
-import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
-import android.content.ServiceConnection
 import android.os.Bundle
-import android.os.IBinder
+import android.support.v4.app.FragmentActivity
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.ListView
-import augier.fr.phoebius.UI.SongAdapter
+import android.widget.MediaController
+import augier.fr.phoebius.UI.MainPageFragment
+import augier.fr.phoebius.UI.PlayerControl
 import augier.fr.phoebius.core.MusicService
-import augier.fr.phoebius.core.MusicService.MusicBinder
+import augier.fr.phoebius.core.MusicServiceConnection
 import augier.fr.phoebius.utils.SongList
 import com.arasthel.swissknife.SwissKnife
 import com.arasthel.swissknife.annotations.InjectView
-import com.arasthel.swissknife.annotations.OnItemClick
 
-public class MainActivity extends Activity
+public class MainActivity extends FragmentActivity
 {
-	public static final String APP_NAME = "Phoebius"
-	@InjectView ListView songView
-	private SongList songList
-	private MusicService musicService
-	private Intent playIntent
-	private boolean musicBound = false
+	public static final String APP_NAME = R.string.app_name
+	private static Context context
+	@InjectView MediaController mediaController
 	private MusicServiceConnection musicConnection
+	private Intent playIntent
+	private PlayerControl playerControl
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
 	{
 		// Class init
 		super.onCreate(savedInstanceState)
+		context = this
 		contentView = R.layout.activity_main
 		SwissKnife.inject(this)
 
 		// Variables init
-		songList = new SongList(contentResolver)
+		/*
+		 * TODO : Intencier dans un thread à part
+		 */
 		musicConnection = new MusicServiceConnection()
-
-		// UI init
-		SongAdapter songAdapter = new SongAdapter(this, songList.songList)
-		songView.setAdapter(songAdapter)
-	}
+		musicConnection.serviceConnectedEvent = this.&onServiceConnected
+		playerControl = new PlayerControl(musicConnection, mediaController)
+    }
 
 	@Override
 	protected void onStart()
 	{
 		super.onStart()
 
+		Activity thisActivity = this
 		if(playIntent == null)
 		{
-			playIntent = new Intent(this, MusicService.class)
+			playIntent = new Intent(thisActivity, MusicService.class)
 			bindService(playIntent, musicConnection, BIND_AUTO_CREATE)
-			startService(playIntent)
 		}
+	}
+
+	@Override
+	protected void onDestroy()
+	{
+		stopService(playIntent)
+		musicConnection.destroy()
+		super.onDestroy()
 	}
 
 	@Override
@@ -63,13 +70,6 @@ public class MainActivity extends Activity
 	{
 		menuInflater.inflate(R.menu.main, menu)
 		return true
-	}
-
-	@OnItemClick(R.id.songView)
-	public void onItemClick(int position)
-	{
-		musicService.songPos = position
-		musicService.playSong()
 	}
 
 	@Override
@@ -81,33 +81,22 @@ public class MainActivity extends Activity
 				break
 			case R.id.action_end:
 				stopService(playIntent)
-				musicService = null
+				musicConnection.destroy()
 				System.exit(0)
 				break
 		}
-		return super.onOptionsItemSelected(item);
+		return super.onOptionsItemSelected(item)
 	}
 
-	@Override
-	protected void onDestroy()
+	private void onServiceConnected()
 	{
-		stopService(playIntent);
-		musicService = null;
-		super.onDestroy();
-	}
-
-	private class MusicServiceConnection implements ServiceConnection
-	{
-		@Override
-		void onServiceConnected(ComponentName componentName, IBinder iBinder)
+		if(SongList.instance?.currSongList != null)
 		{
-			MusicBinder binder = iBinder as MusicBinder
-			musicService = binder.service
-			musicService.songList = songList
-			musicBound = true
+			def frag = new MainPageFragment(supportFragmentManager, musicService)
+			supportFragmentManager.beginTransaction().add(R.id.mainFrame, frag).commit()
 		}
-
-		@Override
-		void onServiceDisconnected(ComponentName componentName){ musicBound = false }
 	}
+
+	private MusicService getMusicService(){ return musicConnection.musicService }
+	public static Context getApplicationContext(){ return context }
 }
