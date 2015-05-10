@@ -3,10 +3,11 @@ package augier.fr.phoebius.core
 
 import android.app.Notification
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.support.v4.app.NotificationCompat
-import android.widget.RemoteViews
 import augier.fr.phoebius.MainActivity
 import augier.fr.phoebius.R
 
@@ -23,19 +24,15 @@ public class NotificationPlayer
     private static final String NOTIFICATION_TAG = "${MainActivity.APP_NAME}#NotifPlayer"
 	private static NotificationPlayer INSTANCE
 
-	private Notification notification
+	private NotificationCompat.Builder notification
 	private Context context = MainActivity.applicationContext
-	private RemoteViews remoteViews
+
+
+
 
 	private NotificationPlayer()
 	{
-		notification = new NotificationCompat.Builder(context)
-				.setDefaults(Notification.DEFAULT_VIBRATE)
-				.setSmallIcon(R.drawable.notification_player_icon)
-				.setTicker("${MainActivity.APP_NAME}")
-				.setOngoing(true).build()
 
-		remoteViews = new RemoteViews(context.packageName, R.layout.player_notification)
 	}
 	/**
 	 * Shows or updates the notification
@@ -47,16 +44,34 @@ public class NotificationPlayer
 	 *
 	 * @see #cancel()
 	 */
-	public void notify(Bitmap picture, String songTitle, String songArtiste)
-	{
-		remoteViews.setImageViewBitmap(R.id.notifAlbumCover, picture)
-		remoteViews.setTextViewText(R.id.notifSongTitleLabel, songTitle)
-		remoteViews.setTextViewText(R.id.notifSongArtistLabel, songArtiste)
+    public void notify(Bitmap picture, String songTitle, String songArtiste,boolean isPlaying){
+        notification = new NotificationCompat.Builder(context)
+                .setSmallIcon(R.drawable.notification_player_icon)
+                .setTicker("${MainActivity.APP_NAME}")
+                .setOngoing(true)
+                .setLargeIcon(picture)
+                .setContentTitle(songTitle)
+                .setContentText(songArtiste)
 
-		notification.contentView = remoteViews
-		notification.bigContentView = remoteViews
-		def nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-		nm.notify(NOTIFICATION_TAG, 0, notification)
+        notification.addAction( generateAction( android.R.drawable.ic_media_previous, "", MusicService.ACTION_PREVIOUS ));
+        if(isPlaying){
+            notification.addAction( generateAction( android.R.drawable.ic_media_pause, "", MusicService.ACTION_PAUSE ) );
+        }else{
+            notification.addAction( generateAction( android.R.drawable.ic_media_play, "", MusicService.ACTION_PLAY ) );
+        }
+        notification.addAction( generateAction( android.R.drawable.ic_media_next, "", MusicService.ACTION_NEXT ) );
+        def nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.notify(NOTIFICATION_TAG, 0, notification.build())
+    }
+
+
+
+
+    private NotificationCompat.Action generateAction( int icon, String title, String intentAction ) {
+        Intent intent = new Intent( context, MusicService.class );
+        intent.setAction( intentAction );
+        PendingIntent pendingIntent = PendingIntent.getService(context, 1, intent, 0);
+        return new NotificationCompat.Action.Builder( icon, title, pendingIntent ).build();
     }
 
     /**
@@ -71,7 +86,8 @@ public class NotificationPlayer
 
 	public static NotificationPlayer getInstance()
 	{
-		if(!INSTANCE) INSTANCE = new NotificationPlayer()
+		if(!INSTANCE)
+            INSTANCE = new NotificationPlayer()
 		return INSTANCE
 	}
 }

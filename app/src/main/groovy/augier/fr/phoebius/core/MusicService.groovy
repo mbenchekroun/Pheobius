@@ -22,6 +22,13 @@ import augier.fr.phoebius.utils.SongList
 class MusicService extends Service implements OnPreparedListener,
 		OnErrorListener, OnCompletionListener
 {
+    public static final String ACTION_PLAY = "action_play";
+    public static final String ACTION_PAUSE = "action_pause";
+    public static final String ACTION_NEXT = "action_next";
+    public static final String ACTION_PREVIOUS = "action_previous";
+
+
+
 	/**
 	 * Our actual music player that will broadcast sound
 	 */
@@ -43,6 +50,30 @@ class MusicService extends Service implements OnPreparedListener,
 	private boolean mediaPlayerPrepared = false
 
 	private NotificationPlayer notificationPlayer = NotificationPlayer.getInstance()
+
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        handleIntent( intent );
+        return super.onStartCommand(intent, flags, startId);
+    }
+
+    private void handleIntent( Intent intent ) {
+        if( intent == null || intent.getAction() == null )
+            return;
+
+        String action = intent.getAction();
+        if( action.equalsIgnoreCase( ACTION_PLAY ) ) {
+            start();
+        } else if( action.equalsIgnoreCase( ACTION_PAUSE ) ) {
+            pause();
+        }   else if( action.equalsIgnoreCase( ACTION_PREVIOUS ) ) {
+            playPrevious();
+        } else if( action.equalsIgnoreCase( ACTION_NEXT ) ) {
+            playNext();
+        }
+    }
+
 
 	@Override
 	void onDestroy()
@@ -81,18 +112,23 @@ class MusicService extends Service implements OnPreparedListener,
 		}
 		mediaPlayer.prepareAsync()
 		songList.currentSong = song
-		notificationPlayer.notify(Album.defaultCover, song.title, song.album)
+		notificationPlayer.notify(Album.defaultCover, song.title, song.album,true)
 	}
 
 	/**
 	 * Stops the player
 	 */
-	public void stop(){ mediaPlayer.stop() }
+	public void stop(){ mediaPlayer.stop()
+        notificationPlayer.notify(Album.defaultCover,songList.currentSong.title,songList.currentSong.album,false)
+    }
 
 	/**
 	 * Pauses the player
 	 */
-	public void pause(){ mediaPlayer.pause() }
+	public void pause(){ mediaPlayer.pause()
+
+        notificationPlayer.notify(Album.defaultCover,songList.currentSong.title,songList.currentSong.album,false)
+    }
 
 	/**
 	 * Seeks the song currently playing to a given position
@@ -105,13 +141,17 @@ class MusicService extends Service implements OnPreparedListener,
 	/**
 	 * Starts playing the music
 	 */
-	public void start(){ mediaPlayer.start() }
+	public void start(){ mediaPlayer.start()
+        if(songList.currentSong!=null)
+        notificationPlayer.notify(Album.defaultCover,songList.currentSong.title,songList.currentSong.album,true)
+
+    }
 
 	/**
 	 * Moves the song playing (or song to be played if the player
 	 * is paused) to the previous song. see {@link SongList#moveToPreviousSong()}
 	 */
-	public void playPrevious(){ songList.moveToPreviousSong() }
+	public void playPrevious(){ songList.moveToPreviousSong()}
 
 	/**
 	 * Moves the song playing (or song to be played if the player
