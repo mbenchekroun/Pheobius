@@ -23,6 +23,11 @@ import groovy.transform.CompileStatic
 class MusicService extends Service implements OnPreparedListener,
 		OnErrorListener, OnCompletionListener
 {
+    public static final String Action_Play_Pause = "action_play_pause";
+    public static final String ACTION_REWIND = "action_rewind";
+    public static final String ACTION_FAST_FORWARD = "action_fast_foward";
+    public static final String ACTION_NEXT = "action_next";
+    public static final String ACTION_PREVIOUS = "action_previous"
 	/**
 	 * Our actual music player that will broadcast sound
 	 */
@@ -44,6 +49,42 @@ class MusicService extends Service implements OnPreparedListener,
 	private boolean mediaPlayerPrepared = false
 
 	private NotificationPlayer notificationPlayer = NotificationPlayer.getInstance()
+
+
+    //private WidgetPlayer widgetPlayer = WidgetPlayer.getInstance()
+
+
+    private RemotePlayerManager remotePlayerManager = RemotePlayerManager.getInstance();
+
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        handleIntent( intent );
+        return super.onStartCommand(intent, flags, startId);
+    }
+
+    private void handleIntent( Intent intent ) {
+        if( intent == null || intent.getAction() == null )
+            return;
+
+        String action = intent.getAction();
+        if( action.equalsIgnoreCase( Action_Play_Pause ) ) {
+            if(isPlaying()){
+                pause();
+            }else{
+                start();
+            }
+        }else if( action.equalsIgnoreCase( ACTION_PREVIOUS ) ) {
+            playPrevious();
+        }else if( action.equalsIgnoreCase( ACTION_REWIND ) ) {
+            seek(getPosition()-10000);
+        }else if( action.equalsIgnoreCase( ACTION_FAST_FORWARD ) ) {
+            seek(getPosition()+10000);
+        } else if( action.equalsIgnoreCase( ACTION_NEXT ) ) {
+            playNext();
+        }
+    }
+
 
 	@Override
 	void onDestroy()
@@ -83,17 +124,18 @@ class MusicService extends Service implements OnPreparedListener,
 		mediaPlayer.prepareAsync()
 		songList.currentSong = song
 		notificationPlayer.notify(songList.getCoverFor(song.album), song.title, song.album)
+        remotePlayerManager.update(songList.getCoverFor(song.album), song.title, song.album,true)
 	}
 
 	/**
 	 * Stops the player
 	 */
-	public void stop(){ mediaPlayer.stop() }
+	public void stop(){ mediaPlayer.stop() ;remotePlayerManager.refresh(false)}
 
 	/**
 	 * Pauses the player
 	 */
-	public void pause(){ mediaPlayer.pause() }
+	public void pause(){ mediaPlayer.pause();remotePlayerManager.refresh(false) }
 
 	/**
 	 * Seeks the song currently playing to a given position
@@ -106,7 +148,7 @@ class MusicService extends Service implements OnPreparedListener,
 	/**
 	 * Starts playing the music
 	 */
-	public void start(){ mediaPlayer.start() }
+	public void start(){ mediaPlayer.start() ;remotePlayerManager.refresh(true)}
 
 	/**
 	 * Moves the song playing (or song to be played if the player
